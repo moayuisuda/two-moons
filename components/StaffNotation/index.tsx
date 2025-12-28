@@ -158,8 +158,8 @@ ${str}
           opacity: 1;
         }
         :global(.abcjs-playing) {
-          fill: #1890ff !important;
-          stroke: #1890ff !important;
+          fill: #aaa !important;
+          stroke: #aaa !important;
           opacity: 0.8;
         }
       `}</style>
