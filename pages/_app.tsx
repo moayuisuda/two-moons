@@ -358,6 +358,18 @@ function MyApp({ Component, pageProps, router }: AppPropsWithLayout) {
             )}
           />
 
+          {/* Google Fonts */}
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin=""
+          />
+          <link
+            href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap"
+            rel="stylesheet"
+          />
+
           {/* PWA Meta Tags */}
           <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#000000" />
@@ -403,7 +415,7 @@ function MyApp({ Component, pageProps, router }: AppPropsWithLayout) {
 
         <div
           style={{
-            fontFamily: `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol','Noto Color Emoji'`,
+            // fontFamily: `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol','Noto Color Emoji'`,
             height: "100vh",
             width: "100vw",
             position: "fixed",
@@ -427,7 +439,6 @@ function MyApp({ Component, pageProps, router }: AppPropsWithLayout) {
         <div
           className="root"
           style={{
-            fontFamily: `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol','Noto Color Emoji'`,
             // height: checkPWA() ? "100vh" : "",
             // overflowY: "auto",
             // overscrollBehavior: "none",
