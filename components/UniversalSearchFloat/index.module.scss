@@ -1,7 +1,7 @@
 .searchFloat {
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.08);
   position: fixed;
-  top: calc(2px + var(--safe-area-inset-top, 0px));
+  top: calc(8px + var(--safe-area-inset-top, 0px));
   right: calc(50% - 16px);
   z-index: 31;
   // height: 36px;

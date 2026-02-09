@@ -16,9 +16,7 @@ export const UniversalSearchFloat: React.FC = () => {
   return (
     <>
       <Button
-        // type="text"
         shape="circle"
-        // size="small"
         disabled={!isInit}
         icon={<MoonFilled style={{ fontSize: 16 }} />}
         onClick={() => setSearchVisible(true)}

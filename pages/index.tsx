@@ -5,6 +5,12 @@ import { serverSideTranslations } from "next-i18next/serverSideTranslations";
 import { GetStaticProps } from "next";
 import TypewriterText from "@/components/TypewriterText";
 import { Button, Divider } from "antd";
+import {
+  BookOutlined,
+  RocketOutlined,
+  SoundOutlined,
+  ShopOutlined,
+} from "@ant-design/icons";
 import { OneSong } from "@/components/OneSong";
 import { useSnapshot } from "valtio";
 import { appStore } from "@/stores/store";
@@ -113,35 +119,49 @@ export default function Home() {
         <div className="mb-6 md:mb-6"></div>
 
         {/* 行动按钮 */}
-        <div
-          className={`flex ${currentPlan ? "flex-row" : "flex-col"} flex-wrap justify-center md:flex-row gap-6`}
-        >
-          {(() => {
-            const baseButtonClass =
-              "px-10 py-4 h-auto text-lg font-medium border-2 border-black transition-all duration-300";
-            const primaryButtonClass = `${baseButtonClass}`;
-            const secondaryButtonClass = `${baseButtonClass}`;
-
-            const buttons = [
-              { href: "/post/basic/a-song", key: "教程", isPrimary: true },
-              { href: "/practice", key: "练习", isPrimary: false },
-              { href: "/chord", key: "和弦", isPrimary: false },
-              { href: "/market", key: "市场", isPrimary: false },
-            ];
-
-            return buttons.map(({ href, key, isPrimary }) => (
-              <Link key={key} href={href}>
-                <Button
-                  type={isPrimary ? "primary" : undefined}
-                  className={
-                    isPrimary ? primaryButtonClass : secondaryButtonClass
-                  }
-                >
-                  {t(key)}
-                </Button>
-              </Link>
-            ));
-          })()}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 w-full max-w-6xl px-4">
+          {[
+            {
+              href: "/post/basic/a-song",
+              key: "教程",
+              description: "从零开始的音乐之旅",
+              icon: <BookOutlined className="text-xl" />,
+            },
+            {
+              href: "/practice",
+              key: "练习",
+              description: "每日精进，积少成多",
+              icon: <RocketOutlined className="text-xl" />,
+            },
+            {
+              href: "/chord",
+              key: "和弦",
+              description: "探索和声的无限可能",
+              icon: <SoundOutlined className="text-xl" />,
+            },
+            {
+              href: "/market",
+              key: "市场",
+              description: "发现更多优质内容",
+              icon: <ShopOutlined className="text-xl" />,
+            },
+          ].map(({ href, key, description, icon }) => (
+            <Link key={key} href={href} className="w-full group">
+              <div className="flex flex-col items-start p-5 h-full rounded-xl border border-solid border-gray-200 transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                <div className="flex items-center gap-3 mb-3 w-full">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-50 text-gray-900 group-hover:bg-gray-900 group-hover:text-white transition-all duration-300">
+                    {icon}
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 tracking-tight">
+                    {t(key)}
+                  </h3>
+                </div>
+                <p className="text-sm text-gray-500 leading-relaxed font-medium pl-1">
+                  {t(description)}
+                </p>
+              </div>
+            </Link>
+          ))}
         </div>
 
         {/* 副标题 */}

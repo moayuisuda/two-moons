@@ -204,11 +204,10 @@ export const Header: React.FC = () => {
 
   return (
     <header
-      className="w-full flex items-center justify-between text-sm px-4 fixed top-0 z-30"
+      className="w-full border-0 border-b border-solid border-b-stone-100 h-12 flex items-center justify-between text-sm px-4 fixed top-0 z-30"
       style={{
         background: "rgba(255,255,255,.5)",
         backdropFilter: "blur(8px)",
-        boxShadow: "0 0 5px rgba(0, 0, 0, 0.15)",
         paddingTop: "var(--safe-area-inset-top)",
       }}
     >
