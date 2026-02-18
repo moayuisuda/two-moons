@@ -66,7 +66,7 @@ export default function Home() {
             {/* 今日练习 */}
             {currentPlan && (
               <div>
-                <h2 className="text-center">今日练习🌙</h2>
+                <h2 className="text-center">{t("今日练习🌙")}</h2>
                 <div className="mt-4 mb-8 flex flex-wrap gap-4 justify-center">
                   {currentPlan.modules.map((m: ModuleGoal) => (
                     <Card
@@ -85,20 +85,20 @@ export default function Home() {
                       <div className="flex flex-col">
                         <span>
                           {m.type === "guitar.note"
-                            ? "指板音符"
+                            ? t("指板音符")
                             : m.type === "guitar.interval"
-                              ? "指板音程"
+                              ? t("指板音程")
                               : m.type === "sings.chord"
-                                ? "和弦辨认"
+                                ? t("和弦辨认")
                                 : m.type === "sings.interval"
-                                  ? "音程辨认"
+                                  ? t("音程辨认")
                                   : m.type === "sings.staff"
-                                    ? "五线谱"
+                                    ? t("五线谱")
                                     : m.type === "sings.progression"
-                                      ? "和弦进行"
-                                      : "旋律辨认"}
+                                      ? t("和弦进行")
+                                      : t("旋律辨认")}
                         </span>
-                        <span className="text-gray-500 text-sm">{`${m.questions}题 / ${m.accuracy}%`}</span>
+                        <span className="text-gray-500 text-sm">{`${m.questions} ${t("题")} / ${m.accuracy}%`}</span>
                       </div>
                     </Card>
                   ))}
