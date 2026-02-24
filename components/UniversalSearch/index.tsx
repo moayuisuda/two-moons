@@ -172,7 +172,7 @@ export default function UniversalSearch({
 
     try {
       await fetchEventSource(
-        process.env.NEXT_PUBLIC_SERVER_BASE + "/api/ai-creator",
+        (process.env.NEXT_PUBLIC_SERVER_BASE ?? "") + "/api/ai-creator",
         {
           method: "POST",
           headers: {
