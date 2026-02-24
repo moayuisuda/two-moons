@@ -48,7 +48,7 @@ export default async function handler(
     const response = await streamAxios.post(
       "/v4/chat/completions",
       {
-        model: "glm-4.6",
+        model: "glm-4.7",
         thinking: {
           type: "disabled",
         },

@@ -15,7 +15,7 @@ export default async function handler(
     const response = await aiApi.post(
       "/v4/chat/completions",
       {
-        model: "glm-4",
+        model: "glm-4.5-air",
         temperature,
         messages,
       },
