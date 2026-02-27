@@ -126,10 +126,7 @@ class MoaSynth {
 
     audioNodes.start(startTime);
 
-    // Use schedule to stop the audio nodes
-    MoaTone.schedule((t) => {
-      audioNodes.stop(t);
-    }, endTime);
+    audioNodes.stop(endTime);
   }
 
   triggerAttack(note: string, time?: number): void {
@@ -534,15 +531,17 @@ export class MoaAudio {
 
   static getContext(): AudioContext {
     if (!MoaAudio.audioContext) {
-      MoaAudio.audioContext = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
+      MoaAudio.audioContext = new (
+        window.AudioContext || (window as any).webkitAudioContext
+      )();
     }
     return MoaAudio.audioContext;
   }
 
   static resetContext(): void {
-    MoaAudio.audioContext = new (window.AudioContext ||
-      (window as any).webkitAudioContext)();
+    MoaAudio.audioContext = new (
+      window.AudioContext || (window as any).webkitAudioContext
+    )();
   }
 
   static async start(): Promise<void> {
