@@ -43,6 +43,7 @@
     "axios": "^1.6.7",
     "capacitor-plugin-safe-area": "^4.0.3",
     "classnames": "^2.5.1",
+    "comlink": "^4.4.2",
     "cross-env": "^7.0.3",
     "eslint": "^8.47.0",
     "eslint-config-next": "^15.3.5",
