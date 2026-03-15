@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Spin } from "antd";
-import { ChordSegment, useChordMiniApi } from "./api";
+import { ChordSegment, MeteredBeatEvent, useChordMiniApi } from "./api";
 import { UploadProcessing } from "./UploadProcessing";
 import { RecognitionResult } from "./RecognitionResult";
 import { useTranslation } from "react-i18next";
@@ -33,6 +33,7 @@ export function ChordRecognition() {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [segments, setSegments] = useState<ChordSegment[]>([]);
+  const [beats, setBeats] = useState<MeteredBeatEvent[]>([]);
   const objectUrlRef = useRef<string>("");
 
   useEffect(() => {
@@ -57,12 +58,26 @@ export function ChordRecognition() {
     objectUrlRef.current = nextUrl;
     setAudioUrl(nextUrl);
     setSegments([]);
+    setBeats([]);
     setErrorMessage("");
     setIsProcessing(true);
     setProgressPercent(0);
     setProgressText("Uploading audio...");
 
     try {
+      const beats = await recognitionApi.recognizeBeats(
+        {
+          audio: audioFile,
+        },
+        (message, stepProgress) => {
+          setProgressText(message || "Processing audio...");
+          if (typeof stepProgress === "number") {
+            setProgressPercent(stepProgress);
+          }
+        }
+      );
+      setBeats(beats);
+
       const result = await recognitionApi.recognizeChords(
         {
           audio: audioFile,
@@ -94,6 +109,8 @@ export function ChordRecognition() {
         src="https://chordmini-web.pages.dev/"
         width="0"
         height="0"
+        referrerPolicy="no-referrer"
+        allow="cross-origin-isolated"
         style={{
           border: 0,
           opacity: 0,
@@ -117,7 +134,11 @@ export function ChordRecognition() {
         />
       </div>
 
-      <RecognitionResult audioUrl={audioUrl} segments={segments} />
+      <RecognitionResult
+        audioUrl={audioUrl}
+        segments={segments}
+        beats={beats}
+      />
 
       <div className="text-xs text-gray-500 text-center opacity-40">
         Recognition powered by{" "}

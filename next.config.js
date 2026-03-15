@@ -22,10 +22,30 @@ const EXPORT_CONFIG =
       }
     : {};
 
+const HEADER_CONFIG = {
+  // enable cross-origin isolation for SharedArrayBuffer and multi-threading onnx inference
+  headers: async () => [
+    {
+      source: "/:path*",
+      headers: [
+        {
+          key: "Cross-Origin-Opener-Policy",
+          value: "same-origin",
+        },
+        {
+          key: "Cross-Origin-Embedder-Policy",
+          value: "require-corp",
+        },
+      ],
+    },
+  ],
+};
+
 module.exports = withBundleAnalyzer(
   withTM(
     withPWA({
       ...EXPORT_CONFIG,
+      ...HEADER_CONFIG,
       reactStrictMode: false,
       swcMinify: true,
       transpilePackages: [

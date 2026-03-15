@@ -42,18 +42,30 @@ export interface ChordSegment {
   label: string;
 }
 
+export type MeteredBeatEvent = {
+  time: number;
+  beatInBar: number;
+  meter: number;
+  isDownbeat: boolean;
+};
+
 interface RecognizeChordsArgs {
+  audio: File;
+}
+
+interface RecognizeBeatsArgs {
   audio: File;
 }
 
 interface ChordMiniApi {
   recognizeChords: (
     args: RecognizeChordsArgs,
-    onLogProgress?: (
-      message: string,
-      /** 0 ~ 100 */ stepProgress?: number
-    ) => void
+    onLogProgress?: (message: string, stepProgress?: number) => void
   ) => Promise<ChordSegment[]>;
+  recognizeBeats: (
+    args: RecognizeBeatsArgs,
+    onLogProgress?: (message: string, stepProgress?: number) => void
+  ) => Promise<MeteredBeatEvent[]>;
   forceUpdate: () => void;
   version: () => string;
 }
@@ -66,6 +78,10 @@ export interface RecognitionApi {
       /** 0 ~ 100 */ stepProgress?: number
     ) => void
   ) => Promise<ChordSegment[]>;
+  recognizeBeats: (
+    args: RecognizeBeatsArgs,
+    onLogProgress?: (message: string, stepProgress?: number) => void
+  ) => Promise<MeteredBeatEvent[]>;
 }
 
 export function useChordMiniApi() {
@@ -113,6 +129,12 @@ export function useChordMiniApi() {
           setRecognitionApi({
             recognizeChords: (args, callback) => {
               return api.recognizeChords(
+                args, // cloned (lightweight file handle)
+                callback ? proxy(callback) : undefined // proxied (callable function)
+              );
+            },
+            recognizeBeats: (args, callback) => {
+              return api.recognizeBeats(
                 args, // cloned (lightweight file handle)
                 callback ? proxy(callback) : undefined // proxied (callable function)
               );
