@@ -24,5 +24,7 @@
   "导入失败:": "Import failed:",
   "导入失败，请检查分享码是否正确": "Import failed, please check if the share code is correct",
   "共 {{total}} 条记录": "Total {{total}} records",
-  "2000s": "2000s"
+  "2000s": "2000s",
+  "上传可复用的片段，而非大段的完整进行": "Upload small, reusable fragments rather than long, complete performances",
+  "请给你的片段命名有意义的名称": "Please give your fragment a meaningful name"
 }

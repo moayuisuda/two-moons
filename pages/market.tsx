@@ -144,6 +144,15 @@ export default function Marketplace() {
               <ShopOutlined /> {t("市场")}
             </h1>
             <p className="text-gray-600">{t("发现和导入精选的合集")}</p>
+            <div className="flex justify-center mt-2">
+              <ul
+                className="text-gray-500 text-sm text-left"
+                style={{ width: 340 }}
+              >
+                <li>✔ {t("上传可复用的片段，而非大段的完整进行")}</li>
+                <li>✔ {t("请给你的片段命名有意义的名称")}</li>
+              </ul>
+            </div>
           </div>
 
           <div className="mb-8">

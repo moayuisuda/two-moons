@@ -181,7 +181,7 @@ export const ChordProgression = () => {
 
     if (!synthRef.current)
       synthRef.current = new MoaTone.Synth({
-        preset: "sine",
+        preset: appStore.audioPreset.piano,
       }).toDestination();
 
     await MoaTone.start();
