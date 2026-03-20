@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Spin } from "antd";
 import { ChordSegment, MeteredBeatEvent, useChordMiniApi } from "./api";
+import {
+  EstimatedChordSegment,
+  estimateKey,
+} from "./key-estimation/estimate-key";
 import { UploadProcessing } from "./UploadProcessing";
 import { RecognitionResult } from "./RecognitionResult";
 import { useTranslation } from "react-i18next";
@@ -32,7 +36,7 @@ export function ChordRecognition() {
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [audioUrl, setAudioUrl] = useState<string>("");
-  const [segments, setSegments] = useState<ChordSegment[]>([]);
+  const [segments, setSegments] = useState<EstimatedChordSegment[]>([]);
   const [beats, setBeats] = useState<MeteredBeatEvent[]>([]);
   const objectUrlRef = useRef<string>("");
 
@@ -90,7 +94,8 @@ export function ChordRecognition() {
         }
       );
 
-      setSegments(result);
+      const estimatedSegments = estimateKey(result);
+      setSegments(estimatedSegments);
       setProgressPercent(100);
       setProgressText("Recognition complete.");
     } catch (error) {

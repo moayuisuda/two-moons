@@ -3,9 +3,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatTime, getActiveChordIndex } from "./utils";
 import { Empty } from "antd";
 
+interface ChordSegmentWithKey extends ChordSegment {
+  key?: string;
+}
+
 interface RecognitionResultProps {
   audioUrl: string;
-  segments: ChordSegment[];
+  segments: ChordSegmentWithKey[];
   beats: MeteredBeatEvent[];
 }
 
@@ -29,6 +33,8 @@ interface QuantizedChord {
   sourceIndex: number;
   startTime: number;
   nearestBeatUnit: number;
+  key?: string;
+  showKeyMarker?: boolean;
 }
 
 interface BarChordSpan {
@@ -38,6 +44,8 @@ interface BarChordSpan {
   spanUnits: number;
   seekTime: number;
   showLabel: boolean;
+  key?: string;
+  showKeyMarker?: boolean;
 }
 
 interface ChordSpanBlockProps {
@@ -55,7 +63,7 @@ function ChordSpanBlock({
 
   return (
     <div
-      className={`h-[30px] px-2 rounded-sm border-solid border-0 border-l-2 transition-colors duration-200 cursor-pointer flex items-center overflow-hidden whitespace-nowrap ${
+      className={`relative z-10 h-[30px] px-2 rounded-sm border-solid border-0 border-l-2 transition-colors duration-200 cursor-pointer flex items-center overflow-visible whitespace-nowrap ${
         isActive
           ? "bg-sky-100 text-gray-900 border-l-sky-600/40"
           : "bg-gray-100 text-gray-800 border-l-black/40"
@@ -66,8 +74,15 @@ function ChordSpanBlock({
       title={chord.label || "N"}
       onClick={onClick}
     >
+      {chord.showLabel && chord.showKeyMarker && chord.key ? (
+        <div className="absolute -top-4 left-0 z-20 text-[12px] leading-none text-white bg-black px-1.5 py-[2px] rounded-sm shadow-sm border border-black/80 pointer-events-none whitespace-nowrap">
+          {chord.key}
+        </div>
+      ) : null}
       {chord.showLabel ? (
-        <div className="font-semibold text-sm">{chord.label || "N"}</div>
+        <div className="font-semibold text-sm overflow-hidden text-ellipsis">
+          {chord.label || "N"}
+        </div>
       ) : null}
     </div>
   );
@@ -92,9 +107,9 @@ function BarGridLine({
   const spans = buildBarChordSpans(bar, quantizedChords, totalUnits);
 
   return (
-    <div className="relative rounded-sm border border-gray-200 bg-white/60 overflow-hidden w-full">
+    <div className="relative rounded-sm border border-gray-200 bg-white/60 overflow-visible w-full">
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none z-0"
         style={{
           backgroundImage:
             "linear-gradient(to right, rgba(0,0,0,0.04) 1px, transparent 1px)",
@@ -102,7 +117,7 @@ function BarGridLine({
         }}
       />
       <div
-        className="relative min-h-[34px] p-1 grid gap-1"
+        className="relative z-10 min-h-[34px] p-1 grid gap-1"
         style={{
           gridTemplateColumns: `repeat(${unitsInBar}, minmax(0, 1fr))`,
         }}
@@ -124,7 +139,7 @@ function BarGridLine({
 }
 
 interface SegmentFallbackListProps {
-  segments: ChordSegment[];
+  segments: ChordSegmentWithKey[];
   activeChordIndex: number;
   onSeek: (time: number) => void;
 }
@@ -138,6 +153,8 @@ function SegmentFallbackList({
     <div className="flex flex-wrap gap-2">
       {segments.map((segment, index) => {
         const isActive = index === activeChordIndex;
+        const previousKey = index > 0 ? segments[index - 1].key : undefined;
+        const showKeyMarker = !!segment.key && segment.key !== previousKey;
         return (
           <button
             key={`${segment.start}-${segment.end}-${index}`}
@@ -148,6 +165,11 @@ function SegmentFallbackList({
             }`}
             onClick={() => onSeek(segment.start)}
           >
+            {showKeyMarker ? (
+              <div className="text-[10px] leading-none text-black/55 text-left mb-[2px]">
+                {segment.key}
+              </div>
+            ) : null}
             <div className="font-semibold text-sm" title={segment.label || "N"}>
               {segment.label || "N"}
             </div>
@@ -257,7 +279,7 @@ const findNearestBeatUnitIndex = (time: number, units: HalfBeatUnit[]) => {
 };
 
 const buildQuantizedChords = (
-  segments: ChordSegment[],
+  segments: ChordSegmentWithKey[],
   units: HalfBeatUnit[]
 ) => {
   if (!segments.length || !units.length) {
@@ -271,6 +293,7 @@ const buildQuantizedChords = (
       sourceIndex,
       nearestBeatUnit: findNearestBeatUnitIndex(segment.start, units),
       startUnit: findNearestBeatUnitIndex(segment.start, units),
+      key: segment.key,
     }))
     .sort((a, b) => a.startTime - b.startTime || a.sourceIndex - b.sourceIndex);
 
@@ -312,6 +335,13 @@ const buildQuantizedChords = (
       deduped.push(chord);
     }
   }
+
+  for (let index = 0; index < deduped.length; index += 1) {
+    const previousKey = index > 0 ? deduped[index - 1].key : undefined;
+    deduped[index].showKeyMarker =
+      !!deduped[index].key && deduped[index].key !== previousKey;
+  }
+
   return deduped;
 };
 
@@ -374,6 +404,8 @@ const buildBarChordSpans = (
       seekTime: chord.startTime,
       showLabel:
         chord.startUnit >= barStartUnit && chord.startUnit < barEndUnit,
+      key: chord.key,
+      showKeyMarker: chord.showKeyMarker,
     });
   }
 
