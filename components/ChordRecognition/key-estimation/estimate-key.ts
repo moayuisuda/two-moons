@@ -1,16 +1,15 @@
 import type { ChordSegment } from "../api";
 import {
+  debugChordNaming,
+  parseChordRoot,
   keyTransitionLogProb,
   chordTransitionLogProb,
-  chordStayingLogProb,
-  chordDurationTimeFactor,
-  DEBUG_HMM_PARAMS,
 } from "./hmm-params";
 import {
-  Chord,
-  parseChord,
   getStandardScaleName,
   renameChord,
+  standardMajorScaleNames,
+  standardMinorScaleNames,
 } from "./renaming";
 
 function argMax(scores: number[]) {
@@ -25,12 +24,21 @@ function argMax(scores: number[]) {
   return maxIdx;
 }
 
-function decodeHmm(
-  parsedChords: Chord[],
-  chordDuration: number[],
-  originalChords: ChordSegment[]
-) {
-  const length = parsedChords.length;
+const scaleCandidates = [
+  ...standardMajorScaleNames,
+  ...standardMinorScaleNames.map((x) => `${x}:minor`),
+];
+
+function checkProb(prob: number, ...args: any[]) {
+  if (isNaN(prob) || prob > 0) {
+    console.error(`Invalid probability: ${prob}`, ...args);
+    return 0;
+  }
+  return prob;
+}
+
+function decodeHmm(chords: ChordSegment[]) {
+  const length = chords.length;
   if (length === 0) {
     return [];
   }
@@ -39,55 +47,70 @@ function decodeHmm(
   const dp = Array.from({ length }, () => Array(24).fill(0));
   const pre = Array.from({ length }, () => Array(24).fill(-1));
 
-  const empty = Array(24).fill(0);
+  const empty = Array<number>(24).fill(0);
 
-  let lastChord: Chord | null = null;
+  const averageDuration =
+    chords.reduce((acc, cur) => acc + cur.end - cur.start, 0) / length;
+
+  let lastChord: string | null = null;
   for (let i = 0; i < length; i += 1) {
-    const chord = parsedChords[i];
-    const duration = chordDuration[i];
+    const chord = chords[i].label;
+    const duration = chords[i].end - chords[i].start;
     const lastKeyLogProbs = i > 0 ? dp[i - 1] : empty;
-    for (let currentKey = 0; currentKey < 24; currentKey += 1) {
+    for (let currentKeyIndex = 0; currentKeyIndex < 24; currentKeyIndex += 1) {
+      const currentKey = scaleCandidates[currentKeyIndex];
+
       // transition scores
       const keyTransitions = empty.map(
-        (_, key) => lastKeyLogProbs[key] + keyTransitionLogProb(key, currentKey)
+        (_, key) =>
+          lastKeyLogProbs[key] +
+          checkProb(
+            keyTransitionLogProb(scaleCandidates[key], currentKey),
+            i,
+            currentKey
+          )
       );
       const lastKey = argMax(keyTransitions);
 
       // emission scores
-      const chordTransition = chordTransitionLogProb(
+      const chordTransition = checkProb(
+        chordTransitionLogProb(currentKey, lastChord, chord),
+        i,
         currentKey,
         lastChord,
         chord
       );
-      const chordStaying = chordStayingLogProb(currentKey, chord);
-      const durationFactor = chordDurationTimeFactor(duration);
+
+      // if chord duration is very long, repeat chord transition is more likely
+      const repeatChord =
+        duration < averageDuration * 1.7
+          ? 0
+          : checkProb(
+              chordTransitionLogProb(currentKey, chord, chord),
+              i,
+              currentKey,
+              chord
+            );
 
       // total score
-      const score =
-        keyTransitions[lastKey] +
-        (chordTransition + chordStaying) * durationFactor;
+      const score = keyTransitions[lastKey] + chordTransition + repeatChord;
 
-      dp[i][currentKey] = score;
-      pre[i][currentKey] = lastKey;
+      dp[i][currentKeyIndex] = score;
+      pre[i][currentKeyIndex] = lastKey;
     }
 
-    if (DEBUG_HMM_PARAMS) {
-      const scores = dp[i]
-        .map((score, key) => ({ score, key }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 4);
-      console.log(
-        `i=${i} chord=${originalChords[i].label}\n`,
-        scores
-          .map(
-            ({ key, score }) =>
-              `${getStandardScaleName(key)}: ${score.toFixed(2)}  (${relativeLevel(chord.root, key)})`
-          )
-          .join("\n")
-      );
-    }
+    // const maxScores = dp[i]
+    //   .map((score, idx) => ({ key: scaleCandidates[idx], score }))
+    //   .sort((a, b) => b.score - a.score)
+    //   .slice(0, 5)
+    // console.log(
+    //   `${chords[i].start.toFixed(2)}: \n` +
+    //   maxScores
+    //     .map(x => `${x.key} (${debugChordNaming(lastChord, x.key)} -> ${debugChordNaming(chord, x.key)}): ${x.score.toFixed(2)}`)
+    //     .join("\n")
+    // )
 
-    if (chord.root >= 0 || duration > 1) {
+    if (parseChordRoot(chord) !== null || duration >= averageDuration * 1.7) {
       lastChord = chord;
     }
   }
@@ -100,27 +123,7 @@ function decodeHmm(
   }
   keySequence.reverse();
 
-  return keySequence;
-}
-
-const relativeLevels = [
-  "1",
-  "b2",
-  "2",
-  "b3",
-  "3",
-  "4",
-  "b5",
-  "5",
-  "b6",
-  "6",
-  "b7",
-  "7",
-];
-function relativeLevel(root: number, key: number) {
-  if (root < 0) return "N";
-  const delta = (root - key + 24) % 12;
-  return relativeLevels[delta];
+  return keySequence.map((key) => scaleCandidates[key]);
 }
 
 export interface EstimatedChordSegment extends ChordSegment {
@@ -129,15 +132,12 @@ export interface EstimatedChordSegment extends ChordSegment {
 }
 
 export function estimateKey(chords: ChordSegment[]) {
-  const parsedChords = chords.map(({ label }) => parseChord(label));
-  const chordDuration = chords.map(({ start, end }) => end - start);
-
-  const keySequence = decodeHmm(parsedChords, chordDuration, chords);
+  const keySequence = decodeHmm(chords);
 
   return chords.map<EstimatedChordSegment>((chord, index) => {
     return {
       ...chord,
-      label: renameChord(chord.label, parsedChords[index], keySequence[index]),
+      label: renameChord(chord.label, keySequence[index]),
       key: getStandardScaleName(keySequence[index]),
       originalLabel: chord.label,
     };

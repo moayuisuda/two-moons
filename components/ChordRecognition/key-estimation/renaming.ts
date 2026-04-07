@@ -1,12 +1,8 @@
-// TODO: use global types
-export interface Chord {
-  root: number;
-  type: string;
-}
+import { parseChordRoot, parseKey } from "./hmm-params";
 
 type AccidentalPreference = "sharp" | "flat" | "neutral";
 
-const sharpScaleNames = [
+export const sharpScaleNames = [
   "C",
   "C#",
   "D",
@@ -21,7 +17,7 @@ const sharpScaleNames = [
   "B",
 ];
 
-const flatScaleNames = [
+export const flatScaleNames = [
   "C",
   "Db",
   "D",
@@ -36,7 +32,7 @@ const flatScaleNames = [
   "B",
 ];
 
-const standardMajorScaleNames = [
+export const standardMajorScaleNames = [
   "C",
   "Db",
   "D",
@@ -51,7 +47,7 @@ const standardMajorScaleNames = [
   "B",
 ];
 
-const standardMinorScaleNames = [
+export const standardMinorScaleNames = [
   "C",
   "C#",
   "D",
@@ -65,33 +61,6 @@ const standardMinorScaleNames = [
   "Bb",
   "B",
 ];
-
-const rootToLevelMap = Object.fromEntries([
-  ...sharpScaleNames.map((root, index) => [root, index]),
-  ...flatScaleNames.map((root, index) => [root, index]),
-]);
-
-export function parseChord(label: string): Chord {
-  if (label === "N") {
-    return {
-      root: -1,
-      type: "N",
-    };
-  }
-  const [root, type] = label.split(":");
-  const rootLevel = rootToLevelMap[root];
-  if (rootLevel === undefined) {
-    console.warn("Unexpected chord root: ", root);
-    return {
-      root: -1,
-      type: "N",
-    };
-  }
-  return {
-    root: rootLevel,
-    type: type?.replace(/\/.+$/, "") || "",
-  };
-}
 
 function keyAccidentalPreference(key: number): AccidentalPreference {
   const isMajor = key < 12;
@@ -143,30 +112,31 @@ function chooseScaleName(
  * C major => 0, C# major => 1, ...
  * C minor => 12, C# minor => 13, ...
  */
-export function getStandardScaleName(key: number) {
-  const isMajor = key < 12;
-  const preference = keyAccidentalPreference(key);
+export function getStandardScaleName(key: string) {
+  const [root, isMinor] = parseKey(key);
+  const preference = keyAccidentalPreference(root);
   return (
-    chooseScaleName(key % 12, preference, isMajor) +
-    (isMajor ? " major" : " minor")
+    chooseScaleName(root, preference, !isMinor) +
+    (!isMinor ? " major" : " minor")
   );
 }
 
-export function renameChord(label: string, chord: Chord, key: number) {
-  if (chord.root < 0) return label;
+export function renameChord(label: string, key: string) {
+  const root = parseChordRoot(label);
+  const [keyRoot, isMinor] = parseKey(key);
+  if (root === null) return label;
 
   const colonPos = label.indexOf(":");
   if (colonPos < 0) return label;
 
   const suffix = label.slice(colonPos + 1);
-  const isMajor = key < 12;
-  const deltaKey = (chord.root - key + 24) % 12;
+  const deltaKey = (root - keyRoot + 12) % 12;
 
-  const keyPreference = keyAccidentalPreference(key);
-  const intervalPreference = deltaAccidentalPreference(deltaKey, isMajor);
+  const keyPreference = keyAccidentalPreference(keyRoot);
+  const intervalPreference = deltaAccidentalPreference(deltaKey, !isMinor);
   const preference =
     intervalPreference === "neutral" ? keyPreference : intervalPreference;
 
-  const rootName = chooseScaleName(chord.root, preference, isMajor);
+  const rootName = chooseScaleName(root, preference, !isMinor);
   return `${rootName}:${suffix}`;
 }

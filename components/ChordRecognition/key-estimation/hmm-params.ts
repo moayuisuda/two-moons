@@ -1,324 +1,248 @@
-import { type Chord } from "./renaming";
+import key_hmm_params_raw from "./key_hmm_params_raw.json";
 
-export const DEBUG_HMM_PARAMS = false; // import.meta.env.DEV
+function softClamp(numbers: number[], min: number, max: number, scale = 0) {
+  return numbers.map((num) =>
+    num > max
+      ? max + (num - max) * scale
+      : num < min
+        ? min + (num - min) * scale
+        : num
+  );
+}
 
-/*
-Raw key transition correlation matrix from the paper.
-
-See https://ismir2006.ismir.net/PAPERS/ISMIR0691_Paper.pdf
-*/
-
-const rawKeyTransitionCorrelation = {
-  maj: {
-    maj: [
-      1.0, 0.5, 0.04, 0.105, 0.185, 0.591, 0.683, 0.591, 0.185, 0.105, 0.04,
-      0.5,
-    ],
-    min: [
-      0.511, 0.298, 0.237, 0.654, 0.536, 0.215, 0.369, 0.241, 0.508, 0.651,
-      0.402, 0.158,
-    ],
-  },
-  min: {
-    maj: [
-      0.511, 0.158, 0.402, 0.651, 0.508, 0.241, 0.369, 0.215, 0.536, 0.654,
-      0.237, 0.298,
-    ],
-    min: [
-      1.0, 0.394, 0.16, 0.055, 0.003, 0.339, 0.673, 0.339, 0.003, 0.055, 0.16,
-      0.394,
-    ],
-  },
-};
-
-const NINF = -1000; // small enough to be ignored
-const NTRANS = 3.5; // non diatonic chord transitions score
-
-/*
-Raw chord transition ratings from the paper.
-
-The score is between 1 and 7
-*/
-const rawChordTransitionRatings = [
-  [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0], // N
-  [NTRANS, NINF, 5.1, 4.78, 5.91, 5.94, 5.26, 4.57], // I
-  [NTRANS, 5.69, NINF, 4.0, 4.76, 6.1, 4.97, 5.41], // ii
-  [NTRANS, 5.38, 4.47, NINF, 4.63, 5.03, 4.6, 4.47], // iii
-  [NTRANS, 5.94, 5.0, 4.22, NINF, 6.0, 4.35, 4.79], // IV
-  [NTRANS, 6.19, 4.79, 4.47, 5.51, NINF, 5.19, 4.85], // V
-  [NTRANS, 5.04, 5.44, 4.72, 5.07, 5.56, NINF, 4.5], // vi
-  [NTRANS, 5.85, 4.16, 4.16, 4.53, 5.16, 4.19, NINF], // vii
-];
-
-/*
-Raw chord staying ratings from the paper.
-
-The score is between 1 and 7
-*/
-
-const rawChordStayingRatings = {
-  maj: {
-    maj: [
-      6.66, 4.71, 4.6, 4.31, 4.64, 5.59, 4.36, 5.33, 5.01, 4.64, 4.73, 4.67,
-    ],
-    min: [
-      3.75, 2.59, 3.12, 2.18, 2.76, 3.19, 2.13, 2.68, 2.61, 3.62, 2.56, 2.76,
-    ],
-    dim: [
-      3.27, 2.7, 2.59, 2.79, 2.64, 2.54, 3.25, 2.58, 2.36, 3.35, 2.38, 2.64,
-    ],
-  },
-  min: {
-    maj: [
-      5.3, 4.11, 3.83, 4.14, 3.99, 4.41, 3.92, 4.38, 4.45, 3.69, 4.22, 3.85,
-    ],
-    min: [5.9, 3.08, 3.25, 3.5, 3.33, 4.6, 2.98, 3.48, 3.53, 3.78, 3.13, 3.14],
-    dim: [3.93, 2.84, 3.43, 3.42, 3.51, 3.41, 3.91, 3.16, 3.17, 4.1, 3.1, 3.18],
-  },
-};
-
-/*
-Normalize log probabilities.
-*/
-
+// will cast 0s to targetMinimum
 function normalizeLogProb(
   scores: number[],
   temperature: number,
-  scale: number = 1
+  targetMinimum: number
 ) {
-  const maxScore = Math.max(...scores);
+  const maxScore = scores.reduce((a, b) => (a > b ? a : b), -Infinity);
   const expScores = scores.map((score) =>
     Math.exp((score - maxScore) / temperature)
   );
   const sumExpScores = expScores.reduce((a, b) => a + b, 0);
+  const scale =
+    targetMinimum / Math.log(Math.exp(-maxScore / temperature) / sumExpScores);
   return expScores.map((score) => Math.log(score / sumExpScores) * scale);
 }
 
-// only allows transition when significantly different from the previous key
-const transitionTemperature = 1 / 50;
-const transitionProbFactor = 3;
+/**
+ * [maj(0)/min(1)][delta_key(0~12) + mode_offset(maj:0/min:12)]
+ */
+const stateTransitionProb = key_hmm_params_raw.state_transition_counts.map(
+  // normalized to ~ [0 (keep) ~ -80 (small jump) ~ -120 (large jump)]
+  (mode_counts, i) => normalizeLogProb(softClamp(mode_counts, 0, 160), 1, -120)
+);
 
-const normalizedKeyTransitionLogProbs = {
-  maj: normalizeLogProb(
-    [
-      ...rawKeyTransitionCorrelation.maj.maj,
-      ...rawKeyTransitionCorrelation.maj.min,
-    ],
-    transitionTemperature,
-    transitionProbFactor
-  ),
-  min: normalizeLogProb(
-    [
-      ...rawKeyTransitionCorrelation.min.maj,
-      ...rawKeyTransitionCorrelation.min.min,
-    ],
-    transitionTemperature,
-    transitionProbFactor
-  ),
-};
-
-if (DEBUG_HMM_PARAMS) console.log(normalizedKeyTransitionLogProbs);
+// console.log(stateTransitionProb)
 
 /**
- * C major => 0, C# major => 1, ...
- * C minor => 12, C# minor => 13, ...
+ * [maj(0)/min(1)][from_chord_label * 48 + to_chord_label], chord_label = relative_root(0~11) * 4 + type_offset(maj:0/min:1/dom:2/dim:3)
  */
-export function keyTransitionLogProb(keyFrom: number, keyTo: number) {
-  const isMajorFrom = keyFrom < 12;
-  const isMajorTo = keyTo < 12;
-  const deltaKey = (keyTo - keyFrom + 24) % 12;
-  if (isMajorFrom && isMajorTo) {
-    // from major to major
-    return normalizedKeyTransitionLogProbs.maj[deltaKey] * transitionProbFactor;
-  } else if (isMajorFrom) {
-    // from major to minor
-    return (
-      normalizedKeyTransitionLogProbs.maj[deltaKey + 12] * transitionProbFactor
-    );
-  } else if (isMajorTo) {
-    // from minor to major
-    return normalizedKeyTransitionLogProbs.min[deltaKey] * transitionProbFactor;
+const emissionProb = key_hmm_params_raw.emission_counts.map(
+  // normalized to ~ [-10 (tonic) ~  -50 (rare chords)]
+  (mode_counts, i) =>
+    normalizeLogProb(
+      i === 0
+        ? softClamp(mode_counts.flat(), 0, 400, 0.01)
+        : softClamp(mode_counts.flat(), 0, 400, 0.01),
+      i === 0 ? 20 : 30,
+      -50
+    )
+);
+
+// console.log(emissionProb.map(x => x.slice().sort((a, b) => b - a).slice(0, 20)))
+
+const PITCH_TO_INT = {
+  C: 0,
+  "B#": 0,
+  "C#": 1,
+  Db: 1,
+  D: 2,
+  "D#": 3,
+  Eb: 3,
+  E: 4,
+  Fb: 4,
+  "E#": 5,
+  F: 5,
+  "F#": 6,
+  Gb: 6,
+  G: 7,
+  "G#": 8,
+  Ab: 8,
+  A: 9,
+  "A#": 10,
+  Bb: 10,
+  B: 11,
+  Cb: 11,
+};
+
+const ROOT_RE = /^([A-G](?:#|b)?)/;
+
+// 4 - way taxonomy: 0: maj, 1: min, 2: dom, 3: dim
+const CHORD_TYPE_BY_SUFFIX = {
+  // BASIC_TYPES
+  ".": 0,
+  maj: 0,
+  min: 1,
+  sus4: 0,
+  sus2: 0,
+  dim: 3,
+  aug: 0,
+  "5": 0,
+  "1": 0,
+  // EXTENDED_TYPES
+  maj6: 0,
+  min6: 1,
+  "7": 2,
+  maj7: 0,
+  min7: 1,
+  minmaj7: 1,
+  dim7: 3,
+  hdim7: 3,
+  "9": 2,
+  maj9: 0,
+  min9: 1,
+  "11": 2,
+  min11: 1,
+  "13": 2,
+  maj13: 0,
+  min13: 1,
+  "": 0,
+};
+
+export function parseKey(key: string): [key: number, isMinor: boolean] {
+  if (key.includes(":")) {
+    const [tonic, mode] = key.split(":", 2);
+    const isMinor = mode.trim().toLowerCase() === "minor";
+    return [
+      PITCH_TO_INT[tonic.trim() as keyof typeof PITCH_TO_INT] ?? -1,
+      isMinor,
+    ];
   } else {
-    // from minor to minor
-    return (
-      normalizedKeyTransitionLogProbs.min[deltaKey + 12] * transitionProbFactor
-    );
+    const tonic = key.trim();
+    return [PITCH_TO_INT[tonic as keyof typeof PITCH_TO_INT] ?? -1, false];
   }
 }
 
-const chordTransitionTemperature = 1 / 7;
-const chordTransitionProbFactor = 2;
-
-const normalizedChordTransitionLogProbs = normalizeLogProb(
-  rawChordTransitionRatings.flat(),
-  chordTransitionTemperature,
-  chordTransitionProbFactor
-).flatMap((_, index, array) => {
-  if (index % 8 === 0) return [array.slice(index, index + 8)];
-  return [];
-});
-
-if (DEBUG_HMM_PARAMS) console.log(normalizedChordTransitionLogProbs);
-
-export const majorTonality = [
-  1, // I
-  0,
-  2, // ii
-  0,
-  3, // iii
-  4, // IV
-  0,
-  5, // V
-  0,
-  6, // vi
-  0,
-  7, // vii
-];
-
-export const minorTonality = [
-  1, // i
-  0,
-  2, // ii(dim)
-  3, // bIII
-  0,
-  4, // iv
-  0,
-  5, // v or V
-  6, // bVI
-  0,
-  7, // bVII
-  0,
-];
-
-export function chordRootTonality(key: number, chord: Chord) {
-  const isMajor = key < 12;
-  const deltaKey = (chord.root - key + 24) % 12;
-  return isMajor ? majorTonality[deltaKey] : minorTonality[deltaKey];
+function keyTransitionBucket(curKey: string, nxtKey: string): number {
+  const [curTonic] = parseKey(curKey);
+  const [nxtTonic, nxtIsMinor] = parseKey(nxtKey);
+  const delta = (nxtTonic - curTonic + 12) % 12;
+  return delta + (nxtIsMinor ? 12 : 0);
 }
 
-/**
- * C major => 0, C# major => 1, ...
- * C minor => 12, C# minor => 13, ...
- */
-export function chordTransitionLogProb(
-  key: number,
-  chordFrom: Chord | null,
-  chordTo: Chord
-) {
-  if (!chordFrom || chordFrom.root < 0 || chordTo.root < 0) return 0;
-
-  const tonalityFrom = chordRootTonality(key, chordFrom);
-  const tonalityTo = chordRootTonality(key, chordTo);
-  if (tonalityFrom === tonalityTo) {
-    if (tonalityFrom === 0) {
-      // non diatonic chord transition, less probability
-      return normalizedChordTransitionLogProbs[0][0] * 2;
-    }
-    // the chords have the same root, no transition occurred
-    return 0;
+export function parseChordRoot(chordName: string): number | null {
+  if (!chordName || chordName === "N" || chordName === "X") {
+    return null;
   }
 
-  return normalizedChordTransitionLogProbs[tonalityFrom][tonalityTo];
+  const head = chordName.split("/", 1)[0].trim();
+  const m = head.match(ROOT_RE);
+  if (!m) {
+    return null;
+  }
+
+  const root = m[1];
+  return PITCH_TO_INT[root as keyof typeof PITCH_TO_INT] ?? null;
 }
 
-const chordStayingTemperature = 1 / 7;
-const chordStayingProbFactor = 1;
-const tonalChordStayingFactor = 2;
+function classifyChordType(chordName: string): number | null {
+  if (!chordName || chordName === "N" || chordName === "X") {
+    return null;
+  }
 
-const tonalChordStayingRatings = {
-  maj: {
-    maj: [2, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
-    min: [0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0],
-    dim: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  },
-  min: {
-    maj: [0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0],
-    min: [2, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
-    dim: [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  },
-};
+  const head = chordName.split("/", 1)[0].trim();
+  let quality = "";
+  if (head.includes(":")) {
+    quality = head.split(":", 2)[1];
+  }
 
-const normalizedChordStayingLogProbs = {
-  maj: normalizeLogProb(
-    [
-      ...rawChordStayingRatings.maj.maj.map(
-        (score, index) =>
-          score +
-          tonalChordStayingRatings.maj.maj[index] * tonalChordStayingFactor
-      ),
-      ...rawChordStayingRatings.maj.min.map(
-        (score, index) =>
-          score +
-          tonalChordStayingRatings.maj.min[index] * tonalChordStayingFactor
-      ),
-      ...rawChordStayingRatings.maj.dim.map(
-        (score, index) =>
-          score +
-          tonalChordStayingRatings.maj.dim[index] * tonalChordStayingFactor
-      ),
-    ],
-    chordStayingTemperature,
-    chordStayingProbFactor
-  ),
-  min: normalizeLogProb(
-    [
-      ...rawChordStayingRatings.min.maj.map(
-        (score, index) =>
-          score +
-          tonalChordStayingRatings.min.maj[index] * tonalChordStayingFactor
-      ),
-      ...rawChordStayingRatings.min.min.map(
-        (score, index) =>
-          score +
-          tonalChordStayingRatings.min.min[index] * tonalChordStayingFactor
-      ),
-      ...rawChordStayingRatings.min.dim.map(
-        (score, index) =>
-          score +
-          tonalChordStayingRatings.min.dim[index] * tonalChordStayingFactor
-      ),
-    ],
-    chordStayingTemperature,
-    chordStayingProbFactor
-  ),
-};
+  let q = quality.toLowerCase().trim();
 
-if (DEBUG_HMM_PARAMS) console.log(normalizedChordStayingLogProbs);
+  // Remove all decorations and keep the core suffix.
+  if (q.includes("(")) {
+    q = q.split("(", 1)[0].trim();
+  }
 
-function chordTypeOffset(chord: Chord) {
-  if (chord.type.includes("min"))
-    // min, minmaj7, min7, min9, etc
-    return 12;
-  if (chord.type.includes("maj") || chord.type.includes("sus"))
-    // maj, maj7, sus4, etc
-    return 0;
-  if (chord.type.includes("dim") || chord.type.includes("aug"))
-    // dim, dim7, hdim7, aug, etc
-    return 24;
-  // 7, 9, 11, etc
+  // Prefer explicit mapping for all BASIC/EXTENDED suffixes.
+  if (q in CHORD_TYPE_BY_SUFFIX) {
+    return CHORD_TYPE_BY_SUFFIX[q as keyof typeof CHORD_TYPE_BY_SUFFIX];
+  }
+
+  // Unknown suffix fallback: treat as major.
   return 0;
 }
 
-/**
- * C major => 0, C# major => 1, ...
- * C minor => 12, C# minor => 13, ...
- */
-export function chordStayingLogProb(key: number, chord: Chord) {
-  if (chord.root < 0) return 0;
+function chordSymbolInKey(chordName: string, key: string): number | null {
+  const root = parseChordRoot(chordName);
+  if (root === null) {
+    return null;
+  }
 
-  const isMajor = key < 12;
-  const stayingLogProbs = isMajor
-    ? normalizedChordStayingLogProbs.maj
-    : normalizedChordStayingLogProbs.min;
+  const chordType = classifyChordType(chordName);
+  if (chordType === null) {
+    return null;
+  }
 
-  const typeOffset = chordTypeOffset(chord);
-  const deltaIndex = (chord.root - key + 24) % 12;
-
-  return stayingLogProbs[deltaIndex + typeOffset];
+  const [tonic] = parseKey(key);
+  const relPc = (root - tonic + 12) % 12;
+  return relPc * 4 + chordType;
 }
 
-const secondsPerBeat = 0.1;
+const deltaDebugNames = [
+  "1",
+  "b2",
+  "2",
+  "b3",
+  "3",
+  "4",
+  "b5",
+  "5",
+  "b6",
+  "6",
+  "b7",
+  "7",
+];
 
-export function chordDurationTimeFactor(durationSeconds: number) {
-  return Math.max(durationSeconds - secondsPerBeat, secondsPerBeat);
+export function debugChordNaming(
+  chordName: string | null | undefined,
+  key: string
+) {
+  if (chordName === null || chordName === undefined) {
+    return "N";
+  }
+  const root = parseChordRoot(chordName);
+  if (root === null) {
+    return "N";
+  }
+  const [keyRoot] = parseKey(key);
+  const delta = (root - keyRoot + 12) % 12;
+  const [, chordType] = chordName.split(":", 2);
+  return deltaDebugNames[delta] + ":" + chordType;
+}
+
+export function keyTransitionLogProb(curKey: string, nxtKey: string): number {
+  const [, isMinor] = parseKey(curKey);
+  const bucket = keyTransitionBucket(curKey, nxtKey);
+  return stateTransitionProb[isMinor ? 1 : 0][bucket];
+}
+
+export function chordTransitionLogProb(
+  curKey: string,
+  lastChord: string | undefined | null,
+  nextChord: string
+): number {
+  if (lastChord === null || lastChord === undefined) {
+    return -1;
+  }
+
+  const [, isMinor] = parseKey(curKey);
+  const lastChordSymbol = chordSymbolInKey(lastChord, curKey);
+  const nextChordSymbol = chordSymbolInKey(nextChord, curKey);
+  if (lastChordSymbol === null || nextChordSymbol === null) {
+    return -1;
+  }
+
+  return emissionProb[isMinor ? 1 : 0][lastChordSymbol * 48 + nextChordSymbol];
 }
