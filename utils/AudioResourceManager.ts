@@ -72,9 +72,9 @@ export class AudioResourceManager implements AudioResourcePool {
     this.defineResource({
       id: "piano",
       samples: {
-        A3: "https://louqrudcdwlofubgdlyu.supabase.co/storage/v1/object/sign/audios/piano/A3.wav?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9lYjY1ZmU5Zi00N2QxLTRkMmYtODU0ZC0yYjQwY2FjNDhhODciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhdWRpb3MvcGlhbm8vQTMud2F2IiwiaWF0IjoxNzU2NDcyOTY4LCJleHAiOjE3ODgwMDg5Njh9.kIh_KEyuO7VzC-6PEIGOPjh9lGGRUwAbSy7oIwiIavc",
-        A4: "https://louqrudcdwlofubgdlyu.supabase.co/storage/v1/object/sign/audios/piano/A4.wav?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9lYjY1ZmU5Zi00N2QxLTRkMmYtODU0ZC0yYjQwY2FjNDhhODciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhdWRpb3MvcGlhbm8vQTQud2F2IiwiaWF0IjoxNzU4MjE1NjgxLCJleHAiOjE3ODk3NTE2ODF9.IcdO4Ucak7nGRwHNUAS2yfemmdnIVv_OwYLliREPtcA",
-        A5: "https://louqrudcdwlofubgdlyu.supabase.co/storage/v1/object/sign/audios/piano/A5.wav?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9lYjY1ZmU5Zi00N2QxLTRkMmYtODU0ZC0yYjQwY2FjNDhhODciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhdWRpb3MvcGlhbm8vQTUud2F2IiwiaWF0IjoxNzU4MDQzODgwLCJleHAiOjE3ODk1Nzk4ODB9.CAjV8JSOvC1hrC2WHLlcbTq8y0Tvf2g-WgxbqX3u8Ew",
+        A3: "https://luv-club.oss-cn-chengdu.aliyuncs.com/piano/A3.wav",
+        A4: "https://luv-club.oss-cn-chengdu.aliyuncs.com/piano/A4.wav",
+        A5: "https://luv-club.oss-cn-chengdu.aliyuncs.com/piano/A5.wav",
       },
     });
 
