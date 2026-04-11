@@ -204,62 +204,69 @@ export const Header: React.FC = () => {
 
   return (
     <header
-      className="w-full border-0 border-b border-solid border-b-stone-100 h-12 flex items-center justify-between text-sm px-4 fixed top-0 z-30"
+      className="fixed top-0 z-30 w-full overflow-hidden border-0 border-b border-solid border-b-stone-100"
       style={{
+        height: "var(--app-header-offset)",
         background: "rgba(255,255,255,.5)",
         backdropFilter: "blur(8px)",
-        paddingTop: "var(--safe-area-inset-top)",
+        paddingTop: "var(--safe-area-inset-top, 0px)",
       }}
     >
-      <a
-        href="https://github.com/moayuisuda"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="font-thin font-mono text-inherit hidden md:block"
+      <div
+        className="relative flex items-center justify-between px-4 text-sm"
+        style={{
+          height: "var(--app-header-height)",
+        }}
       >
-        BY MOAYUISUDA
-      </a>
+        <a
+          href="https://github.com/moayuisuda"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden font-mono font-thin text-inherit md:block"
+        >
+          BY MOAYUISUDA
+        </a>
 
-      <Link legacyBehavior href="/">
-        <img
-          className="block cursor-pointer static md:absolute"
-          src="/pics/logo.svg"
-          alt=""
-          style={{
-            left: "calc(50% - 70px)",
-          }}
-          height={36}
-        />
-      </Link>
+        <Link legacyBehavior href="/">
+          <img
+            className="static block h-9 w-auto cursor-pointer md:absolute"
+            src="/pics/logo.svg"
+            alt=""
+            style={{
+              left: "calc(50% - 70px)",
+            }}
+          />
+        </Link>
 
-      <Space>
-        <Menu
-          overflowedIndicator={<UnorderedListOutlined />}
-          className="flex items-center w-28 lg:w-auto justify-end"
-          style={{
-            lineHeight: "36px",
-            minWidth: 0,
-            flex: "auto",
-          }}
-          mode="horizontal"
-          items={menuItemsMap[locale]}
-        />
-        {isLoggedIn && (
-          <div className="flex items-center mr-2">
-            <div
-              style={{
-                marginRight: -2,
-                marginTop: -8,
-              }}
-              className={getStatusDotStyle()}
-              title={getStatusTitle()}
-            ></div>
-            <CloudSyncOutlined style={{ fontSize: 16, marginTop: 2 }} />
+        <Space align="center">
+          <Menu
+            overflowedIndicator={<UnorderedListOutlined />}
+            className="flex items-center justify-end w-28 lg:w-auto"
+            style={{
+              lineHeight: "36px",
+              minWidth: 0,
+              flex: "auto",
+            }}
+            mode="horizontal"
+            items={menuItemsMap[locale]}
+          />
+          {isLoggedIn && (
+            <div className="mr-2 flex items-center">
+              <div
+                style={{
+                  marginRight: -2,
+                  marginTop: -8,
+                }}
+                className={getStatusDotStyle()}
+                title={getStatusTitle()}
+              ></div>
+              <CloudSyncOutlined style={{ fontSize: 16, marginTop: 2 }} />
 
-            {/* <span className="text-xs text-gray-600">{user.name}</span> */}
-          </div>
-        )}
-      </Space>
+              {/* <span className="text-xs text-gray-600">{user.name}</span> */}
+            </div>
+          )}
+        </Space>
+      </div>
     </header>
   );
 };

@@ -36,9 +36,7 @@ export const OneSong = () => {
     <div
       className="fixed z-10 w-full transition-all duration-700"
       style={{
-        top: collapse
-          ? "calc(48px + var(--safe-area-inset-top))"
-          : "calc(100vh - 40px)",
+        top: collapse ? "var(--app-header-offset)" : "calc(100vh - 40px)",
       }}
     >
       <header
@@ -54,7 +52,7 @@ export const OneSong = () => {
       <div
         className="p-4 bg-white"
         style={{
-          height: "calc(100vh - 48px - 36px - var(--safe-area-inset-top))",
+          height: "calc(100vh - var(--app-header-offset) - 36px)",
           overflow: "auto",
         }}
       >

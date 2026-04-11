@@ -438,16 +438,18 @@ function MyApp({ Component, pageProps, router }: AppPropsWithLayout) {
         </div>
         <div
           className="root"
-          style={{
-            // height: checkPWA() ? "100vh" : "",
-            // overflowY: "auto",
-            // overscrollBehavior: "none",
-          }}
+          style={
+            {
+              // height: checkPWA() ? "100vh" : "",
+              // overflowY: "auto",
+              // overscrollBehavior: "none",
+            }
+          }
         >
           <Header />
           <div
             style={{
-              height: `calc(2.25rem + var(--safe-area-inset-top))`,
+              height: "var(--app-header-offset)",
             }}
           ></div>
           {Component.getLayout ? (
