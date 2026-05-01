@@ -113,6 +113,12 @@ export const Header: React.FC = () => {
             key: "editor",
             label: <MenuLink href="/post/edit">{t("编辑器")}</MenuLink>,
           },
+          {
+            key: "chord-recognition",
+            label: (
+              <MenuLink href="/chord/recognition">{t("和弦识别")}</MenuLink>
+            ),
+          },
         ],
       },
       {
@@ -193,6 +199,12 @@ export const Header: React.FC = () => {
           //   key: "phrase",
           //   label: <MenuLink href="/phrase">{t("乐句")}</MenuLink>,
           // },
+          {
+            key: "chord-recognition",
+            label: (
+              <MenuLink href="/chord/recognition">{t("和弦识别")}</MenuLink>
+            ),
+          },
         ],
       },
       {
